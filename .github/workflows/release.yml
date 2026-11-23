@@ -1,5 +1,11 @@
 name: Publicar versão
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag existente a publicar
+        required: true
+        type: string
   push:
     tags: ['*.*.*']
 permissions:
@@ -7,15 +13,19 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
       - name: Conferir versão, testar e compilar
         run: |
-          test "$GITHUB_REF_NAME" = "$(node -p "require('./manifest.json').version")"
+          test "$RELEASE_TAG" = "$(node -p "require('./manifest.json').version")"
           node --test test.js
           node build.js
       - name: Publicar arquivos para o Obsidian
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" --verify-tag --title "PDF Marcações $GITHUB_REF_NAME" --generate-notes dist/main.js dist/manifest.json dist/styles.css
+          gh release create "$RELEASE_TAG" --verify-tag --title "PDF Marcações $RELEASE_TAG" --generate-notes dist/main.js dist/manifest.json dist/styles.css
