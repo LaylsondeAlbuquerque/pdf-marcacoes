@@ -1,0 +1,97 @@
+<!doctype html><meta charset="utf-8">
+<link rel="stylesheet" href="dist/styles.css">
+<style>.page{position:relative;height:240px}.textLayer{padding:20px}</style>
+<div id="reader"><div class="pdfViewer"><div class="page" data-page-number="1"><div class="textLayer"><span>Uma palavra depois outra linha</span></div></div></div></div>
+<pre id="result">RUNNING</pre>
+<script>
+const module={exports:{}},menus=[];
+class TestMenu {
+  constructor(){this.items=[]}
+  addItem(build){
+    const item={setTitle(s){this.title=s;return this},setIcon(){return this},setChecked(){return this},onClick(f){this.click=f;return this}};
+    build(item);this.items.push(item);
+  }
+  onHide(fn){this.closed=fn}
+  hide(){this.closed()}
+  showAtMouseEvent(){menus.push(this)}
+}
+function require(){return {Plugin:class{},Modal:class{},PluginSettingTab:class{},Menu:TestMenu,Platform:{isMobile:true}}}
+</script>
+<script src="dist/main.js"></script>
+<script>
+(async()=>{
+  const wait=()=>new Promise(resolve=>setTimeout(resolve,120));
+  const assert=(value,msg)=>{if(!value)throw Error(msg)};
+  const root=document.querySelector('#reader'),span=root.querySelector('span'),sel=document.getSelection();
+  const doc={highlights:[]},calls=[],sessions=new Map();
+  const requests=[];
+  const plugin={sessions,settings:{automatic:true,color:'verde',translateWords:true},saveData:async()=>{},find:()=>doc,run:fn=>fn(),fire:fn=>fn(),
+    translate:text=>new Promise((resolve,reject)=>requests.push({text,resolve,reject})),
+    record:async(path,range,color)=>{calls.push(['create',range.text,color]);doc.highlights.push({...range,color,id:'existing'});session.paint(true)},
+    recolor:(path,id,c)=>{calls.push(['edit',id,c]);doc.highlights.find(h=>h.id===id).color=c;session.paint(true)},
+    remove:(path,id)=>{calls.push(['remove',id]);doc.highlights=doc.highlights.filter(h=>h.id!==id);session.paint(true)}};
+  const session=new module.exports.PDFSession(plugin,{view:{contentEl:root,file:{path:'Teste.pdf'}}});
+  sessions.set(1,session);
+  function select(end){
+    const range=document.createRange();range.setStart(span.firstChild,0);range.setEnd(span.firstChild,end);
+    sel.removeAllRanges();sel.addRange(range);
+  }
+  function pointer(type,kind='touch',x=20,y=40){
+    span.dispatchEvent(new PointerEvent(type,{pointerType:kind,isPrimary:true,pointerId:1,button:type==='contextmenu'?2:0,bubbles:true,cancelable:true,clientX:x,clientY:y}));
+  }
+  pointer('pointerdown');select(3);pointer('contextmenu');pointer('pointerup');await wait();
+  const first=session.palette;
+  assert(first?.parentNode===session.bar&&menus.length===0,'long press opened the wrong UI');
+  const finger=new Touch({identifier:8,target:span,clientX:20,clientY:40});
+  span.dispatchEvent(new TouchEvent('touchstart',{bubbles:true,touches:[finger],changedTouches:[finger]}));
+  await new Promise(resolve=>setTimeout(resolve,1200));
+  assert(requests.length===0,'lookup sent before releasing selection handles');
+  span.dispatchEvent(new TouchEvent('touchend',{bubbles:true,touches:[],changedTouches:[finger]}));
+  await new Promise(resolve=>setTimeout(resolve,1300));
+  assert(requests.length===1&&requests[0].text==='Uma','automatic word translation missing');
+  pointer('pointerdown');select(11);pointer('contextmenu');pointer('pointerup');await wait();
+  assert(first===session.palette&&document.querySelectorAll('.pdfm-palette').length===1,'duplicate toolbar');
+  assert(!sel.isCollapsed&&calls.length===0,'adjusting handles committed or cleared the selection');
+  requests[0].resolve('antiga');await wait();
+  assert(first.querySelector('.pdfm-translation').hidden,'stale translation after adjusting selection');
+  first.querySelector('.pdfm-translate').click();
+  assert(requests.length===2&&requests[1].text==='Uma palavra','wrong phrase for translation');
+  requests[1].resolve('Tradução da frase');await wait();
+  assert(first.querySelector('.pdfm-translation').textContent==='Tradução da frase'&&!sel.isCollapsed,'translation interfered with selection');
+  first.querySelector('.pdfm-translate').click();
+  requests.pop().reject(Object.assign(new Error(),{retryAt:Date.now()+60000}));await wait();
+  const link=first.querySelector('.pdfm-translation a'), target=new URL(link.href);
+  assert(target.origin==='https://translate.google.com'&&target.searchParams.get('text')==='Uma palavra'&&target.searchParams.get('tl')==='pt','missing Google Translate fallback');
+  first.querySelector('.pdfm-swatch').click();await wait();
+  assert(calls.length===1&&calls[0][1]==='Uma palavra','wrong saved range');
+  const rect=root.querySelector('.pdfm-mark').getBoundingClientRect(),x=rect.left+2,y=rect.top+2;
+  select(3);pointer('pointerdown','touch',x,y);pointer('contextmenu','touch',x,y);
+  span.addEventListener('pointerup',e=>e.stopPropagation(),{once:true});
+  pointer('pointerup','touch',x,y);await wait();
+  assert(menus.length===0&&session.editing,'tap on saved mark mixed menus');
+  assert(session.palette.querySelectorAll('button').length===7,'expected five edit colors, delete and translate');
+  session.palette.querySelectorAll('.pdfm-swatch')[2].click();await wait();
+  assert(calls[1].join('|')==='edit|existing|azul','recolor did not target the saved id');
+  assert(doc.highlights.length===1&&doc.highlights[0].color==='azul','recolor duplicated the mark');
+  select(3);pointer('pointerdown','mouse',x,y);pointer('contextmenu','mouse',x,y);await wait();
+  assert(menus.length===1&&!session.palette&&menus[0].items.length===7,'desktop right click lost edit actions');
+  menus[0].items[6].click();
+  assert(requests[2]?.text==='Uma palavra','desktop lookup lost saved selection');
+  requests[2].resolve('Resultado');await wait();
+  assert(session.palette.querySelector('.pdfm-translation').textContent==='Resultado','desktop result not shown');
+  session.hidePalette();
+  function touch(type){
+    const t=new Touch({identifier:1,target:span,clientX:x,clientY:y});
+    span.dispatchEvent(new TouchEvent(type,{bubbles:true,touches:type==='touchend'?[]:[t],changedTouches:[t]}));
+  }
+  pointer('pointerdown','touch',x,y);touch('touchstart');pointer('pointercancel','touch',x,y);touch('touchend');await wait();
+  assert(session.editing,'native touchend after pointercancel lost saved mark');
+  session.palette.querySelector('[aria-label="Excluir marcação"]').click();await wait();
+  assert(calls[2].join('|')==='remove|existing','delete did not target the saved id');
+  assert(!doc.highlights.length&&!root.querySelector('.pdfm-mark'),'mark still present after delete');
+  pointer('pointerdown','touch');select(11);await wait();
+  session.destroy();select(3);await wait();
+  assert(!document.querySelector('.pdfm-palette'),'palette recreated after unload');
+  document.querySelector('#result').textContent='PASS';
+})().catch(e=>document.querySelector('#result').textContent='FAIL '+e.stack);
+</script>

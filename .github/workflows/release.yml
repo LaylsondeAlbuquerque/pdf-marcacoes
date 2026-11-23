@@ -1,0 +1,21 @@
+name: Publicar versão
+on:
+  push:
+    tags: ['*.*.*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Conferir versão, testar e compilar
+        run: |
+          test "$GITHUB_REF_NAME" = "$(node -p "require('./manifest.json').version")"
+          node --test test.js
+          node build.js
+      - name: Publicar arquivos para o Obsidian
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "PDF Marcações $GITHUB_REF_NAME" --generate-notes dist/main.js dist/manifest.json dist/styles.css
