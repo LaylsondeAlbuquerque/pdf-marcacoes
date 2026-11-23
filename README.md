@@ -1,4 +1,4 @@
-# PDF Marcações
+# PDF Marcacoes
 
 Marque trechos em cinco cores no leitor de PDF do Obsidian e reúna as citações em uma nota Markdown ao lado de cada livro. A nota acompanha a ordem de leitura e inclui um link para a página de cada trecho.
 
@@ -18,13 +18,13 @@ O plugin desenha as cores sobre as páginas do leitor. As posições e os trecho
 
 **A tradução automática de palavras vem ligada na primeira instalação.** Ao selecionar uma palavra no PDF, mesmo que você pretenda apenas marcá-la, o plugin pode enviá-la a `translate.googleapis.com` para exibir a tradução em português. Ao tocar em **Traduzir**, o plugin consulta o Google com o texto da seleção, que pode ser uma palavra ou uma frase. As traduções recentes ficam em memória durante a sessão.
 
-Para consultar o Google somente quando você tocar em **Traduzir**, desative **Traduzir palavras ao selecionar** nas configurações do **PDF Marcações** antes de começar a leitura. Marcar trechos, copiá-los e consultar as notas funciona offline.
+Para consultar o Google somente quando você tocar em **Traduzir**, desative **Traduzir palavras ao selecionar** nas configurações do **PDF Marcacoes** antes de começar a leitura. Marcar trechos, copiá-los e consultar as notas funciona offline.
 
 **No Android**, o Google pode limitar a consulta dentro do leitor já na primeira palavra. Se aparecer **Consulta no leitor em pausa**, toque em **Abrir no Google Tradutor** para consultar imediatamente o texto selecionado em `translate.google.com`. O tempo indicado na mensagem é a pausa do plugin antes de permitir outra tentativa no leitor. As marcações e a nota do PDF continuam disponíveis durante a pausa.
 
 ## Instalação manual
 
-Na seção **Releases** do repositório, baixe os três anexos da mesma versão, `main.js`, `manifest.json` e `styles.css`. Coloque-os na pasta `.obsidian/plugins/pdf-marcacoes/` do cofre e habilite **PDF Marcações** em **Plugins da comunidade**.
+Na seção **Releases** do repositório, baixe os três anexos da mesma versão, `main.js`, `manifest.json` e `styles.css`. Coloque-os na pasta `.obsidian/plugins/pdf-marcacoes/` do cofre e habilite **PDF Marcacoes** em **Plugins da comunidade**.
 
 ## Desenvolvimento
 
